@@ -3,15 +3,19 @@ import Header from "../components/Header";
 import { getSession, useSession } from "next-auth/react";
 import Login from "../components/Login";
 import Sidebar from "../components/Sidebar";
+import Feed from "../components/Feed";
+import Widgets from "../components/Widgets";
+import { collection, getDocs, query } from "firebase/firestore";
+import { orderBy } from "firebase/firestore";
+import { db } from "../firebase";
 
-export default function Home() {
+export default function Home({ posts }) {
   const { data: session } = useSession();
 
   if (!session) return <Login />;
 
-  console.log(session);
   return (
-    <div className="h-screen bg-gray-100 overflow-hidden">
+    <div className="h-screen bg-white overflow-hidden">
       <Head>
         <title>Facebook</title>
       </Head>
@@ -23,7 +27,9 @@ export default function Home() {
         {/* Sidebar */}
         <Sidebar />
         {/* Feed */}
+        <Feed posts={posts} />
         {/* Widgets */}
+        <Widgets />
       </main>
     </div>
   );
@@ -33,5 +39,25 @@ export async function getServerSideProps(context) {
   // Get the user
   const session = await getSession(context);
 
-  return { props: { session } };
+  // if (!session)
+  //
+  // const posts = await db.collection("posts").orderBy("timestamp", "desc").get();
+
+  const posts = await getDocs(
+    collection(db, "posts"),
+    orderBy("timestamp", "desc")
+  );
+
+  const docs = posts.docs.map((post) => ({
+    id: post.id,
+    ...post.data(),
+    timestamp: null,
+  }));
+
+  return {
+    props: {
+      session: session,
+      posts: docs,
+    },
+  };
 }
